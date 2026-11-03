@@ -1,0 +1,118 @@
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    VotingClassifier,
+    AdaBoostClassifier,
+    GradientBoostingClassifier
+)
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+from xgboost import XGBClassifier
+
+# Step 1: Load Iris dataset
+iris = load_iris()
+X = iris.data
+y = iris.target
+
+# Step 2: Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2,
+    random_state=42, stratify=y
+)
+
+# Step 3: Create individual classifiers
+logistic = make_pipeline(
+    StandardScaler(),
+    LogisticRegression(max_iter=1000)
+)
+
+random_forest = RandomForestClassifier(
+    n_estimators=100, random_state=42
+)
+
+# Step 4: Create Voting Classifier
+voting = VotingClassifier(
+    estimators=[
+        ('lr', logistic),
+        ('rf', random_forest)
+    ],
+    voting='soft'
+)
+
+# Step 5: Create AdaBoost model
+adaboost = AdaBoostClassifier(
+    n_estimators=50,
+    random_state=42
+)
+
+# Step 6: Create Gradient Boosting model
+gbm = GradientBoostingClassifier(
+    n_estimators=100,
+    learning_rate=0.1,
+    random_state=42
+)
+
+# Step 7: Create XGBoost model
+xgb = XGBClassifier(
+    n_estimators=100,
+    learning_rate=0.1,
+    max_depth=3,
+    objective='multi:softprob',
+    eval_metric='mlogloss',
+    random_state=42
+)
+
+# Step 8: Train and evaluate all models
+models = {
+    'Voting Classifier': voting,
+    'AdaBoost': adaboost,
+    'Gradient Boosting': gbm,
+    'XGBoost': xgb
+}
+
+results = {}
+
+for name, model in models.items():
+
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+
+    results[name] = accuracy * 100
+
+    print("\n", name)
+    print("Accuracy:", accuracy * 100, "%")
+    print(classification_report(
+        y_test, y_pred,
+        target_names=iris.target_names
+    ))
+
+# Step 9: Compare model performance
+print("\nModel Comparison:")
+for name, accuracy in results.items():
+    print(name, ":", round(accuracy, 2), "%")
+
+# Step 10: Plot accuracy comparison
+plt.figure(figsize=(9, 5))
+
+plt.bar(results.keys(), results.values())
+
+plt.xlabel("Models")
+plt.ylabel("Accuracy (%)")
+plt.title("Comparison of Ensemble Learning Algorithms")
+plt.ylim(0, 105)
+plt.xticks(rotation=15)
+
+plt.show()
